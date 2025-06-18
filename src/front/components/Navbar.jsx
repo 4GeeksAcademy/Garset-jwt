@@ -1,18 +1,25 @@
+import React from "react";
 import { Link } from "react-router-dom";
+import useGlobalReducer from "../hooks/useGlobalReducer.jsx";
 
 export const Navbar = () => {
+	const { store, dispatch } = useGlobalReducer();
+
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("user");
+		dispatch({ type: "logout" });
+	};
 
 	return (
-		<nav className="navbar navbar-light bg-light">
+		<nav className="navbar navbar-expand-lg navbar-dark bg-dark">
 			<div className="container">
-				<Link to="/">
-					<span className="navbar-brand mb-0 h1">React Boilerplate</span>
-				</Link>
-				<div className="ml-auto">
-					<Link to="/demo">
-						<button className="btn btn-primary">Check the Context in action</button>
-					</Link>
-				</div>
+				<Link className="navbar-brand" to="/">My App</Link>
+				{store.auth.isAuthenticated && (
+					<button className="btn btn-outline-light" onClick={handleLogout}>
+						Logout
+					</button>
+				)}
 			</div>
 		</nav>
 	);
