@@ -3,21 +3,21 @@ import { useNavigate } from "react-router-dom";
 import rigoImageUrl from "../assets/img/rigo-baby.jpg";
 import useGlobalReducer from "../hooks/useGlobalReducer.jsx";
 
-export const Home = () => {
-	const { store, dispatch } = useGlobalReducer();
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [error, setError] = useState("");
-	const [isRegistering, setIsRegistering] = useState(false);
-	const navigate = useNavigate();
+export let Home = () => {
+	let { store, dispatch } = useGlobalReducer();
+	let [email, setEmail] = useState("");
+	let [password, setPassword] = useState("");
+	let [error, setError] = useState("");
+	let [isRegistering, setIsRegistering] = useState(false);
+	let navigate = useNavigate();
 
-	const loadMessage = async () => {
+	let loadMessage = async () => {
 		try {
-			const backendUrl = import.meta.env.VITE_BACKEND_URL;
+			let backendUrl = import.meta.env.VITE_BACKEND_URL;
 			if (!backendUrl) throw new Error("VITE_BACKEND_URL is not defined in .env file");
 
-			const response = await fetch(backendUrl + "/api/hello");
-			const data = await response.json();
+			let response = await fetch(backendUrl + "/api/hello");
+			let data = await response.json();
 
 			if (response.ok) dispatch({ type: "set_hello", payload: data.message });
 			return data;
@@ -26,17 +26,17 @@ export const Home = () => {
 		}
 	};
 
-	const login = async () => {
+	let login = async () => {
 		try {
 			setError("");
-			const backendUrl = import.meta.env.VITE_BACKEND_URL;
-			const response = await fetch(backendUrl + "/login", {
+			let backendUrl = import.meta.env.VITE_BACKEND_URL;
+			let response = await fetch(`${backendUrl}/login`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ email, password }),
 			});
 
-			const data = await response.json();
+			let data = await response.json();
 
 			if (response.ok) {
 
@@ -61,36 +61,42 @@ export const Home = () => {
 		}
 	};
 
-	const register = async () => {
+	let register = async () => {
 		try {
 			setError("");
-			const backendUrl = import.meta.env.VITE_BACKEND_URL;
-			const response = await fetch(backendUrl + "/register", {
+			let backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+			if (!backendUrl) {
+				throw new Error("Backend URL is not configured");
+			}
+
+			// Elimina cualquier barra adicional al final de la URL
+			backendUrl = backendUrl.trim().replace(/\/+$/, '');
+
+			let response = await fetch(`${backendUrl}/register`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ email, password }),
 			});
 
-			const data = await response.json();
+			let data = await response.json();
 
-			if (response.ok) {
-
-				alert("Registration successful! Please login.");
-
-				setEmail("");
-				setPassword("");
-
-				setIsRegistering(false);
-			} else {
-				throw new Error(data.message || "Registration failed");
+			if (!response.ok) {
+				throw new Error(data.msg || data.message || "Registration failed");
 			}
+
+			alert("Registration successful! Please login.");
+			setEmail("");
+			setPassword("");
+			setIsRegistering(false);
+
 		} catch (err) {
 			setError(err.message);
 			console.error("Registration error:", err);
 		}
 	};
 
-	const logout = () => {
+	let logout = () => {
 
 		localStorage.removeItem("token");
 		localStorage.removeItem("user");
@@ -100,12 +106,12 @@ export const Home = () => {
 		navigate("/");
 	};
 
-	const accessProtected = async () => {
+	let accessProtected = async () => {
 		try {
 			if (!store.auth.token) throw new Error("No authentication token found");
 
-			const backendUrl = import.meta.env.VITE_BACKEND_URL;
-			const response = await fetch(backendUrl + "/protected", {
+			let backendUrl = import.meta.env.VITE_BACKEND_URL;
+			let response = await fetch(`${backendUrl}/protected`, {
 				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
@@ -113,7 +119,7 @@ export const Home = () => {
 				},
 			});
 
-			const data = await response.json();
+			let data = await response.json();
 
 			if (response.ok) {
 				alert(`Protected data: ${JSON.stringify(data)}`);

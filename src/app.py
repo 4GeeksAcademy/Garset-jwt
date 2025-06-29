@@ -15,17 +15,21 @@ from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
-
+from flask_cors import CORS
 # from models import Person
+
+
 
 ENV = "development" if os.getenv("FLASK_DEBUG") == "1" else "production"
 static_file_dir = os.path.join(os.path.dirname(
     os.path.realpath(__file__)), '../dist/')
 app = Flask(__name__)
+CORS(app) 
 app.url_map.strict_slashes = False
 app.config["JWT_SECRET_KEY"] = os.getenv('JWT-KEY')
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
+
 
 # database condiguration
 db_url = os.getenv("DATABASE_URL")
@@ -78,41 +82,64 @@ def serve_any_other_file(path):
 
 @app.route("/register", methods=["POST"])
 def register():
-    body = request.get_json(silent=True)
-    if body is None:
-        return jsonify({'msg': 'Debes enviar información aen el body'}), 400
-    if 'email' not in body:
-        return jsonify({'msg': 'El campo email es obligatorio'}), 400
-    if 'password' not in body:
-        return jsonify({'msg': 'El campo password es obligatorio'}), 400
-    new_user = User()
-    new_user.email = body['email']
-    new_user.password = bcrypt.generate_password_hash(body['password']).decode('utf-8')
-    new_user.is_active = True
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({'msg':f'Usuario{new_user.email} creado'}), 201
+    try:
+        body = request.get_json(silent=True)
+        if body is None:
+            return jsonify({'msg': 'Debes enviar información al body'}), 400
+        if 'email' not in body:
+            return jsonify({'msg': 'El campo email es obligatorio'}), 400
+        if 'password' not in body:
+            return jsonify({'msg': 'El campo password es obligatorio'}), 400
+        
+        # Verifica si el usuario ya existe
+        existing_user = User.query.filter_by(email=body['email']).first()
+        if existing_user:
+            return jsonify({'msg': 'El email ya está registrado'}), 400
+
+        new_user = User()
+        new_user.email = body['email']
+        new_user.password = bcrypt.generate_password_hash(body['password']).decode('utf-8')
+        new_user.is_active = True
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        return jsonify({'msg': f'Usuario {new_user.email} creado'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'msg': str(e)}), 500
 
 
 @app.route("/login", methods=["POST"])
 def login():
-    body = request.get_json(silent=True)
-    if body is None:
-        return jsonify({'msg': 'Debes enviar información aen el body'}), 400
-    if 'email' not in body:
-        return jsonify({'msg': 'El campo email es obligatorio'}), 400
-    if 'password' not in body:
-        return jsonify({'msg': 'El campo password es obligatorio'}), 400
-    user = User.query.filter_by(email=body['email']).first()
-    if user in None:
-        return jsonify({'msg': f'Usuario o contraseña errónea'}), 400
-    password_correct = bcrypt.check_password_hash(
-        user.password, body['password'])
-    if not password_correct:
-        return jsonify({'msg': f'Usuario o contraseña errónea'}), 400
-    access_token = create_access_token(identity=user.email)
-    return jsonify({'msg': 'ok', 'token': access_token})
-
+    try:
+        body = request.get_json(silent=True)
+        if body is None:
+            return jsonify({'msg': 'Debes enviar información al body'}), 400
+        if 'email' not in body:
+            return jsonify({'msg': 'El campo email es obligatorio'}), 400
+        if 'password' not in body:
+            return jsonify({'msg': 'El campo password es obligatorio'}), 400
+        
+        user = User.query.filter_by(email=body['email']).first()
+        if user is None:  # Corregido de "in" a "is"
+            return jsonify({'msg': 'Usuario o contraseña errónea'}), 400
+            
+        password_correct = bcrypt.check_password_hash(user.password, body['password'])
+        if not password_correct:
+            return jsonify({'msg': 'Usuario o contraseña errónea'}), 400
+            
+        access_token = create_access_token(identity=user.email)
+        return jsonify({
+            'msg': 'ok',
+            'token': access_token,
+            'user': {
+                'email': user.email,
+                'id': user.id
+            }
+        })
+    except Exception as e:
+        return jsonify({'msg': str(e)}), 500
 
 @app.route("/protected", methods=["GET"])
 @jwt_required()
